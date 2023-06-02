@@ -167,11 +167,54 @@ static inline int64_t getTimeInUs() {
     return time;
 }
 
+
+#include <stdint.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+static int setSchedAffinity(const std::vector<int> &cpuids)
+{
+
+    // cpu_set_t definition
+    // ref:http://stackoverflow.com/questions/16319725/android-set-thread-affinity
+#define CPU_SETSIZE 1024
+#define __NCPUBITS (8 * sizeof(unsigned long))
+    typedef struct
+    {
+        unsigned long __bits[CPU_SETSIZE / __NCPUBITS];
+    } cpu_set_t;
+#ifndef __aarch64__
+#define CPU_SET(cpu, cpusetp) \
+    ((cpusetp)->__bits[(cpu) / __NCPUBITS] |= (1UL << ((cpu) % __NCPUBITS)))
+#define CPU_ZERO(cpusetp) \
+    memset((cpusetp), 0, sizeof(cpu_set_t))
+#endif
+    // set affinity for thread
+#ifdef __linux__
+    pid_t pid = syscall(SYS_gettid);
+#else
+    pid_t pid = gettid();
+#endif
+    cpu_set_t mask;
+    CPU_ZERO(&mask);
+    for (int i = 0; i < (int)cpuids.size(); i++)
+    {
+        CPU_SET(cpuids[i], &mask);
+    }
+    int syscallret = syscall(__NR_sched_setaffinity, pid, sizeof(mask), &mask);
+    if (syscallret)
+    {
+        printf("syscall error ret:%d errno:%d\n", syscallret, errno);
+        return -1;
+    }
+    return 0;
+}
+
+
 static int test_main(int argc, const char* argv[]) {
     if (argc < 2) {
-        MNN_PRINT("========================================================================\n");
-        MNN_PRINT("Arguments: model.MNN runLoops runMask forwardType numberThread precision inputSize \n");
-        MNN_PRINT("========================================================================\n");
+        MNN_PRINT("===========================================================================\n");
+        MNN_PRINT("Arguments: model.MNN runLoops runMask forwardType cpuID precision inputSize\n");
+        MNN_PRINT("===========================================================================\n");
         return -1;
     }
 
@@ -213,16 +256,20 @@ static int test_main(int argc, const char* argv[]) {
         MNN_PRINT("Use extra forward type: %d\n", type);
     }
 
-    int modeNum = 4;
+    int modeNum = 1;
     if (argc > 5) {
-        modeNum = ::atoi(argv[5]);
+        // modeNum = ::atoi(argv[5]);
+        {
+            std::vector<int> cpuIDs;
+            cpuIDs.push_back(std::atoi(argv[5]));
+            auto cpuok = setSchedAffinity(cpuIDs);
+            if(0==cpuok)  MNN_PRINT("Use CPU %d\n", std::atoi(argv[5]));
+        }
     }
     int precision = BackendConfig::Precision_Low;
     int memory = BackendConfig::Memory_Normal;
     if (argc > 6) {
-        int mask = atoi(argv[6]);
-        precision = mask % 4;
-        memory = (mask / 4) % 4;
+        precision = atoi(argv[6]);
     }
     // input dims
     std::vector<int> inputDims;
@@ -272,9 +319,9 @@ static int test_main(int argc, const char* argv[]) {
     config.backupType = type;
     BackendConfig backendConfig;
     // config.path.outputs.push_back("ResizeBilinear_2");
-    // backendConfig.power = BackendConfig::Power_High;
+    backendConfig.power = BackendConfig::Power_High;
     backendConfig.precision = static_cast<MNN::BackendConfig::PrecisionMode>(precision);
-    backendConfig.memory = static_cast<MNN::BackendConfig::MemoryMode>(memory);
+    backendConfig.memory = BackendConfig::Memory_High;;
     config.backendConfig     = &backendConfig;
     MNN::Session* session    = NULL;
     MNN::Tensor* inputTensor = nullptr;
@@ -513,6 +560,41 @@ static int test_main(int argc, const char* argv[]) {
             }
             opSum = opSum / runTime;
             MNN_PRINT("Avg= %f ms, OpSum = %f ms min= %f ms, max= %f ms\n", sum / (float)t, opSum, *minTime, *maxTime);
+        }
+
+        
+        {
+            MNN_PRINT("**** Result ****\n");
+            MNN_PRINT("output size:%d\n", expectTensor.elementSize());
+            auto type = expectTensor.getType();
+
+            auto size = expectTensor.elementSize();
+            std::vector<std::pair<int, float>> tempValues(size);
+            if (type.code == halide_type_float)
+            {
+                MNN_PRINT("output type: float\n");
+                auto values = expectTensor.host<float>();
+                for (int i = 0; i < size; ++i)
+                {
+                    tempValues[i] = std::make_pair(i, values[i]);
+                }
+            }
+            if (type.code == halide_type_uint && type.bytes() == 1)
+            {
+                MNN_PRINT("output type: uint8\n");
+                auto values = expectTensor.host<uint8_t>();
+                for (int i = 0; i < size; ++i)
+                {
+                    tempValues[i] = std::make_pair(i, values[i]);
+                }
+            }
+
+            int length = size > 10 ? 10 : size;
+
+            for (int i = 0; i < length; ++i)
+            {
+                MNN_PRINT("%d, %f\n", tempValues[i].first, tempValues[i].second);
+            }
         }
     }
     net->updateCacheFile(session);

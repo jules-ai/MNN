@@ -18,12 +18,21 @@
 #include "Profiler.hpp"
 #include <MNN/Tensor.hpp>
 #include "revertMNNModel.hpp"
+#include <sstream>
 
 #define MNN_PRINT_TIME_BY_NAME
 
 using namespace MNN;
 
 int main(int argc, const char* argv[]) {
+    {
+        if (argc < 2) {
+            MNN_PRINT("========================================================================\n");
+            MNN_PRINT("Arguments: model.MNN runLoops forwardType inputSize numberThread\n");
+            MNN_PRINT("========================================================================\n");
+            return -1;
+        }
+    }
     std::string cmd = argv[0];
     std::string pwd = "./";
     auto rslash     = cmd.rfind("/");
@@ -64,7 +73,7 @@ int main(int argc, const char* argv[]) {
         MNN_PRINT("%d ", dim);
     }
     MNN_PRINT("\n");
-    int threadNumber = 4;
+    int threadNumber = 1;
     if (argc > 5) {
         threadNumber = ::atoi(argv[5]);
         MNN_PRINT("Set ThreadNumber = %d\n", threadNumber);
@@ -140,6 +149,17 @@ int main(int argc, const char* argv[]) {
         for (auto o : tensors) {
             o->wait(MNN::Tensor::MAP_TENSOR_READ, true);
         }
+        for (size_t i = 0; i < tensors.size(); i++)
+        {
+            auto tensor = tensors[i];
+                std::ostringstream oss;
+                for (int j = 0; j < tensor->dimensions(); j++) {
+                    oss << (j ? " X " : "") << tensor->length(j);
+                }
+
+                MNN_PRINT("Dimensions: %d, %s, OP name %s : %lu\n", tensor->dimensions(), oss.str().c_str(), info->name().c_str(), i);
+            //if(inputs[i]->dimensions() == 4) MNN_PRINT("tensor = %s op = %s size = %u shape = %d %d %d %d\n",inputs[i]->name().c_str(),info->name().c_str(),inputs[i]->size(), inputs[i]->batch(), inputs[i]->channel(), inputs[i]->height(), inputs[i]->width());
+        }
         profiler->end(info);
         return true;
     };
@@ -157,5 +177,40 @@ int main(int argc, const char* argv[]) {
 #endif
     profiler->printSlowOp("Convolution", 20, 0.03f);
     profiler->printTimeByType(runTime);
+
+    
+    {
+        MNN_PRINT("**** Result ****\n");
+        MNN_PRINT("output size:%d\n", outputTensorUser->elementSize());
+        auto type = outputTensorUser->getType();
+
+        auto size = outputTensorUser->elementSize();
+        std::vector<std::pair<int, float>> tempValues(size);
+        if (type.code == halide_type_float)
+        {
+            MNN_PRINT("output type: float\n");
+            auto values = outputTensorUser->host<float>();
+            for (int i = 0; i < size; ++i)
+            {
+                tempValues[i] = std::make_pair(i, values[i]);
+            }
+        }
+        if (type.code == halide_type_uint && type.bytes() == 1)
+        {
+            MNN_PRINT("output type: uint8\n");
+            auto values = outputTensorUser->host<uint8_t>();
+            for (int i = 0; i < size; ++i)
+            {
+                tempValues[i] = std::make_pair(i, values[i]);
+            }
+        }
+
+        int length = size > 10 ? 10 : size;
+
+        for (int i = 0; i < length; ++i)
+        {
+            MNN_PRINT("%d, %f\n", tempValues[i].first, tempValues[i].second);
+        }
+    }
     return 0;
 }
