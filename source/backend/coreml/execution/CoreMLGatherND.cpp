@@ -32,7 +32,7 @@ ErrorCode CoreMLGatherND::onResize(const std::vector<Tensor *> &inputs, const st
 
             auto castedIndicesLayer = mCoreMLBackend->create<CoreML__Specification__NeuralNetworkLayer>();
             core_ml__specification__neural_network_layer__init(castedIndicesLayer);
-            mCoreMLBackend->setLayerName(castedIndicesLayer, indicesName);
+            mCoreMLBackend->setLayerName(castedIndicesLayer, std::move(indicesName));
 
             castedIndicesLayer->layer_case = CORE_ML__SPECIFICATION__NEURAL_NETWORK_LAYER__LAYER_LOAD_CONSTANT_ND;
             castedIndicesLayer->loadconstantnd = mCoreMLBackend->create<CoreML__Specification__LoadConstantNDLayerParams>();
