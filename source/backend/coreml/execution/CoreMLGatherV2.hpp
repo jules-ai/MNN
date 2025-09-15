@@ -15,7 +15,7 @@ namespace MNN {
 
 class CoreMLGatherV2 : public CoreMLCommonExecution {
 public:
-    CoreMLGatherV2(Backend *b, const Op *op);
+    CoreMLGatherV2(Backend *b, const Op *op, const std::vector<Tensor*>& inputs, const std::vector<Tensor*>& outputs);
     virtual ~CoreMLGatherV2() = default;
     virtual ErrorCode onResize(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) override;
 };

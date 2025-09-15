@@ -10,7 +10,7 @@
 
 namespace MNN {
 
-CoreMLGatherV2::CoreMLGatherV2(Backend *b, const Op *op) : CoreMLCommonExecution(b, op) {
+CoreMLGatherV2::CoreMLGatherV2(Backend *b, const Op *op, const std::vector<Tensor*>& inputs, const std::vector<Tensor*>& outputs) : CoreMLCommonExecution(b, op) {
     // Do nothing
 }
 
