@@ -16,15 +16,15 @@ class GeometryConvert : public GeometryComputer {
 public:
     virtual bool onCompute(const Op* op, const std::vector<Tensor*>& inputs, const std::vector<Tensor*>& outputs,
                            Context& context, CommandBuffer& buffer) const override {
-        if (context.forwardType() == MNN_FORWARD_NN) {
-            return false;
-        }
         if (op->type() == OpType_ConvertTensor) {
             auto input  = inputs[0];
             auto output = outputs[0];
             return ConvertUtils::compute(input, output, buffer);
         }
         MNN_ASSERT(op->type() == OpType_CastLike);
+        if (context.forwardType() == MNN_FORWARD_NN) {
+            return false;
+        }
         auto input  = inputs[0];
         auto type  = OpCommonUtils::convertDataType(inputs[1]->getType());
         auto output = outputs[0];
