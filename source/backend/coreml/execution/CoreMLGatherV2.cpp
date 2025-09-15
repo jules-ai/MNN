@@ -153,4 +153,6 @@ ErrorCode CoreMLGatherV2::onResize(const std::vector<Tensor *> &inputs, const st
     return NO_ERROR;
 }
 
+REGISTER_COREML_OP_CREATOR(CoreMLGatherV2, OpType_GatherV2);
+REGISTER_COREML_OP_CREATOR(CoreMLGatherV2, OpType_Gather);
 } // namespace MNN
