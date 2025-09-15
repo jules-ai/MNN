@@ -16,6 +16,9 @@ class GeometryConvert : public GeometryComputer {
 public:
     virtual bool onCompute(const Op* op, const std::vector<Tensor*>& inputs, const std::vector<Tensor*>& outputs,
                            Context& context, CommandBuffer& buffer) const override {
+        if (context.backend()->type() == MNN_FORWARD_NN) {
+            return false;
+        }
         if (op->type() == OpType_ConvertTensor) {
             auto input  = inputs[0];
             auto output = outputs[0];
