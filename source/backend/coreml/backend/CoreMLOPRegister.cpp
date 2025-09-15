@@ -24,6 +24,8 @@ extern void ___CoreMLActivation__OpType_Sigmoid__();
 extern void ___CoreMLActivation__OpType_Softmax__();
 extern void ___CoreMLGatherV2__OpType_GatherV2__();
 extern void ___CoreMLGatherV2__OpType_Gather__();
+extern void ___CoreMLGatherV2__OpType_GatherND__();
+extern void ___CoreMLCast__OpType_Cast__();
 
 void registerCoreMLOps() {
 ___CoreMLRelu6__OpType_ReLU6__();
@@ -50,5 +52,7 @@ ___CoreMLActivation__OpType_Sigmoid__();
 ___CoreMLActivation__OpType_Softmax__();
 ___CoreMLGatherV2__OpType_GatherV2__();
 ___CoreMLGatherV2__OpType_Gather__();
+___CoreMLGatherV2__OpType_GatherND__();
+___CoreMLCast__OpType_Cast__();
 }
 }
