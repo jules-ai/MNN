@@ -246,13 +246,18 @@ ErrorCode GeometryComputerUtils::shapeComputeAndGeometryTransform(
                     res = geo->onRecompute(info.op, info.inputs, info.outputs, geoContext, tempBuffer);
                 }
                 if (!res) {
-                    tempBuffer.command.clear();
-                    tempBuffer.extras.clear();
-                    res = geo->onCompute(info.op, info.inputs, info.outputs, geoContext, tempBuffer);
-                }
-                if (!res) {
-                    MNN_ERROR("Const Folder Error in geometry for %s\n", info.op->name()->c_str());
-                    return NOT_SUPPORT;
+                    // Add check here to avoid castlike being converted to cast for CoreML
+                    if (info.op->type() == OpType_CastLike && geoContext.forwardType() == MNN_FORWARD_NN) {
+                        // Do nothing, leave it to the backend
+                    } else {
+                        tempBuffer.command.clear();
+                        tempBuffer.extras.clear();
+                        res = geo->onCompute(info.op, info.inputs, info.outputs, ctx, tempBuffer);
+                        if (!res) {
+                            MNN_ERROR("Const Folder Error in geometry for %s\n", info.op->name()->c_str());
+                            return NOT_SUPPORT;
+                        }
+                    }
                 }
             }
             GeometryComputerUtils::makeRaster(tempBuffer, cmdBufferVir, ctx);
