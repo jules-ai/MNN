@@ -52,7 +52,7 @@ ErrorCode CoreMLGatherV2::onResize(const std::vector<Tensor *> &inputs, const st
 
             auto castedIndicesLayer = mCoreMLBackend->create<CoreML__Specification__NeuralNetworkLayer>();
             core_ml__specification__neural_network_layer__init(castedIndicesLayer);
-            mCoreMLBackend->setLayerName(castedIndicesLayer, indicesName);
+            mCoreMLBackend->setLayerName(castedIndicesLayer, std::move(indicesName));
 
             castedIndicesLayer->layer_case = CORE_ML__SPECIFICATION__NEURAL_NETWORK_LAYER__LAYER_LOAD_CONSTANT_ND;
             castedIndicesLayer->loadconstantnd = mCoreMLBackend->create<CoreML__Specification__LoadConstantNDLayerParams>();
@@ -69,12 +69,12 @@ ErrorCode CoreMLGatherV2::onResize(const std::vector<Tensor *> &inputs, const st
             core_ml__specification__weight_params__init(castedIndicesLayer->loadconstantnd->data);
 
             auto n_bytes = indices->elementSize() * sizeof(int32_t);
-            castedIndicesLayer->loadconstantnd->data->n_bytesvalue = n_bytes;
-            castedIndicesLayer->loadconstantnd->data->bytesvalue = mCoreMLBackend->create<uint8_t>(n_bytes);
+            castedIndicesLayer->loadconstantnd->data->rawvalue.len = n_bytes;
+            castedIndicesLayer->loadconstantnd->data->rawvalue.data = mCoreMLBackend->create<uint8_t>(n_bytes);
 
             // Perform cast
             auto host = indices->host<void>();
-            auto dest = castedIndicesLayer->loadconstantnd->data->bytesvalue;
+            auto dest = castedIndicesLayer->loadconstantnd->data->rawvalue.data;
             if (indices->getType().code == halide_type_int && indices->getType().bits == 64) {
                 auto src = (int64_t*)host;
                 auto dst = (int32_t*)dest;
