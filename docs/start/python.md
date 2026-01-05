@@ -356,8 +356,10 @@ mnnconvert -f ONNX --modelFile user.onnx --MNNModel user.mnn --weightQuantBits=8
 | 2 | <font style="color:rgba(0, 0, 0, 0.85);background-color:#ffffff;">MNN_FORWARD_CUDA</font> | GPU | PC-NV / 服务器-NV |
 | 3 | <font style="color:rgba(0, 0, 0, 0.85);background-color:#ffffff;">MNN_FORWARD_OPENCL</font> | GPU | PC / Android |
 | 5 | <font style="color:rgba(0, 0, 0, 0.85);background-color:#ffffff;">MNN_FORWARD_NN</font> | NPU / GPU | PC-Mac / iPhone |
+| 6 | <font style="color:rgba(0, 0, 0, 0.85);background-color:#ffffff;">MNN_FORWARD_OPENGL</font> | GPU | PC / Android |
 | 7 | <font style="color:rgba(0, 0, 0, 0.85);background-color:#ffffff;">MNN_FORWARD_VULKAN</font> | GPU | PC / Android |
-| 9 | <font style="color:rgba(0, 0, 0, 0.85);background-color:#ffffff;">MNN_FORWARD_USER_1</font> | NPU | Android-华为手机 |
+| 8 | <font style="color:rgba(0, 0, 0, 0.85);background-color:#ffffff;">MNN_FORWARD_USER_0</font> | NPU | Android-华为手机 |
+| 9 | <font style="color:rgba(0, 0, 0, 0.85);background-color:#ffffff;">MNN_FORWARD_USER_1</font> | GPU | PC-NV / 服务器-NV |
 
 
 
@@ -385,8 +387,11 @@ net = MNN.nn.load_module_from_file(sys.argv[1], ["input"], ["MobilenetV1/Predict
         * 1 : Metal
         * 2 : CUDA
         * 3 : OpenCL
-        * 5: NPU
-        * 7: Vulkan
+        * 5 : NPU
+        * 6 : OpenGL
+        * 7 : Vulkan
+        * 8 : HIAI
+        * 9 : TensorRT
     - precision
         * 0 : normal
         * 1 : high
