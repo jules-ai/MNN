@@ -383,4 +383,4 @@ _deps
 .cursor
 
 # llm model
-transformers/llm/export/model/
+transformers/llm/export/model/3rd_party/oneDNN

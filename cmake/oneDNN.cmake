@@ -1,6 +1,6 @@
 include(ExternalProject)
 
-set(DOWNLOAD_URL https://github.com/oneapi-src/oneDNN/archive/v1.7.zip)
+set(DOWNLOAD_URL https://github.com/oneapi-src/oneDNN/archive/v3.7.zip)
 set(ROOT ${CMAKE_CURRENT_LIST_DIR}/../3rd_party/)
 set(ONEDNN_DIR ${ROOT}/oneDNN/)
 set(MNN_BUILD_DIR ${CMAKE_CURRENT_LIST_DIR}/../build/)
