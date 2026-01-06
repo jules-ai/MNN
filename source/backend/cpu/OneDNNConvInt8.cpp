@@ -32,10 +32,10 @@ Execution* OneDNNConvInt8::create(Backend* backend, const MNN::Op* op, const std
         scale[i] = convParam->symmetricQuan()->scale()->data()[i];
     }
     const int conv_mask = 2;
-    resource->conv_attr.set_output_scales(conv_mask, scale);
+    resource->conv_attr.set_scales_mask(DNNL_ARG_DST, conv_mask);
     if (convCommon->relu() || convCommon->relu6()) {
         post_ops ops;
-        ops.append_eltwise(1.0f, algorithm::eltwise_relu, 0.0f, 0.0f);
+        ops.append_eltwise(algorithm::eltwise_relu, 0.0f, 0.0f);
         resource->conv_attr.set_post_ops(ops);
     }
     auto eng = engine(engine::kind::cpu, 0);
@@ -55,12 +55,11 @@ Execution* OneDNNConvInt8::create(Backend* backend, const MNN::Op* op, const std
     auto conv_bias_md = memory::desc({conv_bias_tz}, dt::s32, tag::a);
     auto conv_dst_md = memory::desc({conv_dst_tz}, dt::s8, tag::any);
 
-    auto conv_desc = convolution_forward::desc(prop_kind::forward_inference,
+    auto conv_pd = convolution_forward::primitive_desc(eng, prop_kind::forward_inference,
         algorithm::convolution_auto, conv_src_md, conv_weights_md, conv_bias_md,
-        conv_dst_md, conv_strides, conv_padding, conv_padding);
-    auto conv_pd = convolution_forward::primitive_desc(conv_desc, resource->conv_attr, eng);
+        conv_dst_md, conv_strides, conv_padding, conv_padding, resource->conv_attr);
     auto weightSrc = convParam->symmetricQuan()->weight()->data();
-    resource->mWeight.reset(Tensor::createDevice<int8_t>({(int)conv_pd.weights_desc().get_size()}));
+    resource->mWeight.reset(Tensor::createDevice<int8_t>(std::vector<int>{(int)conv_pd.weights_desc().get_size()}));
     resource->mBias.reset(Tensor::createDevice<int32_t>({(int)convParam->symmetricQuan()->bias()->size()}));
     auto res = backend->onAcquireBuffer(resource->mWeight.get(), Backend::STATIC);
     res = res && backend->onAcquireBuffer(resource->mBias.get(), Backend::STATIC);
@@ -129,16 +128,15 @@ ErrorCode OneDNNConvInt8::onResize(const std::vector<Tensor*>& inputs, const std
     mDstTemp = nullptr;
 
     // Fix weight desc and bias desc
-    auto conv_desc = convolution_forward::desc(prop_kind::forward_inference,
+    auto conv_pd = convolution_forward::primitive_desc(mResource->eng, prop_kind::forward_inference,
         algorithm::convolution_auto, conv_src_md, mResource->conv_weights.get_desc(), mResource->conv_bias.get_desc(),
-                                               conv_dst_md, conv_strides, {std::get<1>(pads), std::get<0>(pads)}, {std::get<3>(pads), std::get<2>(pads)});
-    auto conv_pd = convolution_forward::primitive_desc(conv_desc, mResource->conv_attr, mResource->eng);
+                                               conv_dst_md, conv_strides, {std::get<1>(pads), std::get<0>(pads)}, {std::get<3>(pads), std::get<2>(pads)}, mResource->conv_attr);
     conv = convolution_forward(conv_pd);
     mSrcTemp = nullptr;
     mDstTemp = nullptr;
     if (conv_pd.src_desc() != user_src.get_desc()) {
         auto needSize = conv_pd.src_desc().get_size();
-        mSrcTemp.reset(Tensor::createDevice<int8_t>({(int)needSize}));
+        mSrcTemp.reset(Tensor::createDevice<int8_t>(std::vector<int>{(int)needSize}));
         auto res = backend()->onAcquireBuffer(mSrcTemp.get(), Backend::DYNAMIC);
         if (!res) {
             return OUT_OF_MEMORY;
@@ -147,7 +145,7 @@ ErrorCode OneDNNConvInt8::onResize(const std::vector<Tensor*>& inputs, const std
     }
     if (conv_pd.dst_desc() != user_dst.get_desc()) {
         auto needSize = conv_pd.dst_desc().get_size();
-        mDstTemp.reset(Tensor::createDevice<int8_t>({(int)needSize}));
+        mDstTemp.reset(Tensor::createDevice<int8_t>(std::vector<int>{(int)needSize}));
         auto res = backend()->onAcquireBuffer(mDstTemp.get(), Backend::DYNAMIC);
         if (!res) {
             return OUT_OF_MEMORY;

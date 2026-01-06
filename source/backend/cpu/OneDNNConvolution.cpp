@@ -35,12 +35,12 @@ public:
         memory::dims conv_padding = {0, 0};
         if (mCommon->relu()) {
             post_ops ops;
-            ops.append_eltwise(1.0f, algorithm::eltwise_relu, 0.0f, 0.0f);
+            ops.append_eltwise(algorithm::eltwise_relu, 0.0f, 0.0f);
             conv_attr.set_post_ops(ops);
         }
         if (mCommon->relu6()) {
             post_ops ops;
-            ops.append_eltwise(1.0f, algorithm::eltwise_clip, 0.0f, 6.0f);
+            ops.append_eltwise(algorithm::eltwise_clip, 0.0f, 6.0f);
             conv_attr.set_post_ops(ops);
         }
         auto user_weights_md = memory::desc({conv_weights_tz}, dt::f32, tag::oihw);
@@ -50,12 +50,11 @@ public:
         auto conv_bias_md = memory::desc({conv_bias_tz}, dt::f32, tag::a);
         auto conv_dst_md = memory::desc({conv_dst_tz}, dt::f32, tag::any);
 
-        auto conv_desc = convolution_forward::desc(prop_kind::forward_inference,
+        auto conv_pd = convolution_forward::primitive_desc(eng, prop_kind::forward_inference,
             algorithm::convolution_auto, conv_src_md, conv_weights_md, conv_bias_md,
-            conv_dst_md, conv_strides, conv_padding, conv_padding);
-        auto conv_pd = convolution_forward::primitive_desc(conv_desc, conv_attr, eng);
+            conv_dst_md, conv_strides, conv_padding, conv_padding, conv_attr);
         const auto* weightSrc = originWeight;
-        mWeight.reset(Tensor::createDevice<int8_t>({(int)conv_pd.weights_desc().get_size()}));
+        mWeight.reset(Tensor::createDevice<int8_t>(std::vector<int>{(int)conv_pd.weights_desc().get_size()}));
         auto res = b->onAcquireBuffer(mWeight.get(), Backend::STATIC);
         if (!res) {
             mValid = false;
@@ -111,16 +110,15 @@ public:
         mDstTemp = nullptr;
 
         // Fix weight desc and bias desc
-        auto conv_desc = convolution_forward::desc(prop_kind::forward_inference,
+        auto conv_pd = convolution_forward::primitive_desc(eng, prop_kind::forward_inference,
             algorithm::convolution_auto, conv_src_md, conv_weights.get_desc(), conv_bias.get_desc(),
-                                                   conv_dst_md, conv_strides, {std::get<1>(pads), std::get<0>(pads)}, {std::get<3>(pads), std::get<2>(pads)});
-        auto conv_pd = convolution_forward::primitive_desc(conv_desc, conv_attr, eng);
+                                                   conv_dst_md, conv_strides, {std::get<1>(pads), std::get<0>(pads)}, {std::get<3>(pads), std::get<2>(pads)}, conv_attr);
         conv = convolution_forward(conv_pd);
         mSrcTemp = nullptr;
         mDstTemp = nullptr;
         if (conv_pd.src_desc() != user_src.get_desc()) {
             auto needSize = conv_pd.src_desc().get_size();
-            mSrcTemp.reset(Tensor::createDevice<int8_t>({(int)needSize}));
+            mSrcTemp.reset(Tensor::createDevice<int8_t>(std::vector<int>{(int)needSize}));
             auto res = backend()->onAcquireBuffer(mSrcTemp.get(), Backend::DYNAMIC);
             if (!res) {
                 return OUT_OF_MEMORY;
@@ -129,7 +127,7 @@ public:
         }
         if (conv_pd.dst_desc() != user_dst.get_desc()) {
             auto needSize = conv_pd.dst_desc().get_size();
-            mDstTemp.reset(Tensor::createDevice<int8_t>({(int)needSize}));
+            mDstTemp.reset(Tensor::createDevice<int8_t>(std::vector<int>{(int)needSize}));
             auto res = backend()->onAcquireBuffer(mDstTemp.get(), Backend::DYNAMIC);
             if (!res) {
                 return OUT_OF_MEMORY;
