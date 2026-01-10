@@ -136,12 +136,7 @@ public:
             }
             conv_dst = memory(conv_pd.dst_desc(), eng, mDstTemp->host<float>());
         }
-        if (nullptr != mSrcTemp) {
-            backend()->onReleaseBuffer(mSrcTemp.get(), Backend::DYNAMIC);
-        }
-        if (nullptr != mDstTemp) {
-            backend()->onReleaseBuffer(mDstTemp.get(), Backend::DYNAMIC);
-        }        return NO_ERROR;
+        return NO_ERROR;
     }
     virtual ErrorCode onExecute(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) override {
         memory conv_src_temp = user_src;
