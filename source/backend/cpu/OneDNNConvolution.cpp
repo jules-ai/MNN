@@ -144,6 +144,8 @@ public:
         }        return NO_ERROR;
     }
     virtual ErrorCode onExecute(const std::vector<Tensor *> &inputs, const std::vector<Tensor *> &outputs) override {
+        user_src.set_data_handle(inputs[0]->host<void>());
+        user_dst.set_data_handle(outputs[0]->host<void>());
         memory conv_src_temp = user_src;
         if (nullptr != mSrcTemp) {
             auto r_pd = reorder::primitive_desc(user_src, conv_src);
